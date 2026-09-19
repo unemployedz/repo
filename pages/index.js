@@ -93,17 +93,15 @@ function BlurReveal({ value }) {
 }
 
 export default function Home() {
-  const [module, setModule] = useState('github'); // github | discord
+  const [module, setModule] = useState('github');
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  // GitHub state
   const [username, setUsername] = useState('');
   const [ghLoading, setGhLoading] = useState(false);
   const [ghData, setGhData] = useState(null);
   const [ghError, setGhError] = useState(null);
   const [ghTab, setGhTab] = useState('overview');
 
-  // Discord state
   const [token, setToken] = useState('');
   const [dcLoading, setDcLoading] = useState(false);
   const [dcData, setDcData] = useState(null);
@@ -165,7 +163,11 @@ export default function Home() {
     <>
       <Head>
         <title>OSINT</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        {/* lock scale — prevents iOS zoom on input focus */}
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+        />
         <style>{`
           .private-wrap {
             position: relative;
@@ -206,6 +208,11 @@ export default function Home() {
             z-index: 2;
           }
           .reveal:hover { color: #fff !important; }
+
+          /* 16px inputs = no auto-zoom on iOS/Android */
+          input, textarea, select {
+            font-size: 16px !important;
+          }
         `}</style>
       </Head>
 
@@ -279,7 +286,6 @@ export default function Home() {
             )}
           </header>
 
-          {/* ===== GITHUB MODULE ===== */}
           {module === 'github' && (
             <>
               {ghError && <div className="banner error">{ghError}</div>}
@@ -445,7 +451,6 @@ export default function Home() {
             </>
           )}
 
-          {/* ===== DISCORD TOKEN MODULE ===== */}
           {module === 'discord' && (
             <>
               {dcError && <div className="banner error">{dcError}</div>}
@@ -515,12 +520,10 @@ export default function Home() {
                         <div className="info-label">Payment Sources</div>
                         <div className="info-value">{dcData.payment_sources}</div>
                       </div>
-
                       <div className="info-card wide">
                         <div className="info-label">Email</div>
                         <BlurReveal value={dcData.email} />
                       </div>
-
                       <div className="info-card wide">
                         <div className="info-label">Phone</div>
                         <BlurReveal value={dcData.phone} />
@@ -632,7 +635,7 @@ export default function Home() {
         .search-icon { padding: 0 10px; color: #444; display: flex; }
         .search input {
           flex: 1; border: none; background: #030303; color: #fff;
-          padding: 11px 12px; font-size: 14px; outline: none;
+          padding: 11px 12px; font-size: 16px; outline: none;
           border-radius: 9px; font-family: inherit;
         }
         .search button {
