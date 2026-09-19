@@ -66,20 +66,17 @@ const TABS = [
   { id: 'activity', label: 'Activity', icon: Icon.activity },
 ];
 
-/* exact blur pattern from reference */
 function BlurReveal({ value }) {
   const [revealed, setRevealed] = useState(false);
   if (!value) return <span className="muted">—</span>;
 
   return (
     <span className="private-wrap">
-      <span className={`private-value ${revealed ? 'revealed' : ''}`}>{value}</span>
+      <span className={revealed ? 'private-value revealed' : 'private-value'}>
+        {value}
+      </span>
       {!revealed && (
-        <button
-          type="button"
-          className="reveal"
-          onClick={() => setRevealed(true)}
-        >
+        <button type="button" className="reveal" onClick={() => setRevealed(true)}>
           Click to reveal
         </button>
       )}
@@ -124,6 +121,50 @@ export default function Home() {
       <Head>
         <title>GitHub OSINT</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <style>{`
+          /* GLOBAL BLUR — exact reference pattern, not scoped */
+          .private-wrap {
+            position: relative;
+            display: block;
+            max-width: 100%;
+            min-height: 22px;
+          }
+          .private-value {
+            display: block;
+            filter: blur(6px);
+            user-select: none;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 700;
+            overflow-wrap: anywhere;
+            line-height: 1.4;
+            color: #eee;
+          }
+          .private-value.revealed {
+            filter: none !important;
+            user-select: text;
+          }
+          .reveal {
+            position: absolute;
+            inset: 0;
+            display: grid;
+            place-items: center;
+            border: 0 !important;
+            background: transparent !important;
+            color: #aaa !important;
+            font-size: 9px !important;
+            font-weight: 700 !important;
+            letter-spacing: 0.04em;
+            padding: 0 !important;
+            margin: 0 !important;
+            font-family: inherit;
+            cursor: pointer;
+            z-index: 2;
+          }
+          .reveal:hover {
+            color: #fff !important;
+          }
+        `}</style>
       </Head>
 
       <div className={`app ${sidebarOpen ? '' : 'sidebar-collapsed'}`}>
@@ -436,10 +477,7 @@ export default function Home() {
       `}</style>
 
       <style jsx>{`
-        .app {
-          display: flex;
-          min-height: 100vh;
-        }
+        .app { display: flex; min-height: 100vh; }
 
         .sidebar {
           width: 240px;
@@ -736,40 +774,6 @@ export default function Home() {
           line-height: 1.4;
         }
 
-        /* ===== EXACT BLUR FROM REFERENCE ===== */
-        .private-wrap {
-          position: relative;
-          display: inline-block;
-          max-width: 100%;
-          min-height: 18px;
-        }
-        .private-value {
-          filter: blur(6px);
-          user-select: none;
-          cursor: pointer;
-          font-size: 11px;
-          font-weight: 700;
-          overflow-wrap: anywhere;
-        }
-        .private-value.revealed {
-          filter: none;
-          user-select: text;
-        }
-        .reveal {
-          position: absolute;
-          inset: 0;
-          display: grid;
-          place-items: center;
-          border: 0 !important;
-          background: transparent !important;
-          color: #aaa !important;
-          font-size: 8px !important;
-          padding: 0 !important;
-          font-family: inherit;
-          cursor: pointer;
-        }
-        .reveal:hover { color: #fff !important; }
-
         .email-list { display: flex; flex-direction: column; gap: 7px; }
         .email-row {
           padding: 11px 12px;
@@ -783,7 +787,7 @@ export default function Home() {
           letter-spacing: 0.13em;
           color: #555;
           font-weight: 800;
-          margin-bottom: 4px;
+          margin-bottom: 6px;
         }
         .authors { margin-top: 14px; }
         .section-title {
