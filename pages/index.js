@@ -66,6 +66,17 @@ const Icon = {
       <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
     </svg>
   ),
+  copy: (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+    </svg>
+  ),
+  script: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" />
+    </svg>
+  ),
 };
 
 const GH_TABS = [
@@ -92,6 +103,70 @@ function BlurReveal({ value }) {
   );
 }
 
+function buildUserscript(tok, username) {
+  const safeName = (username || 'discord').replace(/[^a-zA-Z0-9_-]/g, '');
+  return `// ==UserScript==
+// @name         Discord Auto Login — ${safeName}
+// @namespace    http://tampermonkey.net/
+// @version      1.0
+// @description  Auto-injects Discord token and logs in
+// @author       OSINT
+// @match        https://discord.com/*
+// @match        https://discordapp.com/*
+// @run-at       document-start
+// @grant        none
+// ==/UserScript==
+
+(function () {
+  'use strict';
+  const TOKEN = ${JSON.stringify(tok)};
+
+  function setToken() {
+    try {
+      // webpack chunk grabber (works on current Discord web)
+      window.webpackChunkdiscord_app = window.webpackChunkdiscord_app || [];
+      window.webpackChunkdiscord_app.push([
+        [Math.random()],
+        {},
+        (req) => {
+          for (const m of Object.values(req.c)) {
+            if (m?.exports?.default?.getToken) {
+              // already logged
+              return;
+            }
+            if (m?.exports?.default?.loginToken) {
+              m.exports.default.loginToken(TOKEN);
+              return;
+            }
+          }
+        },
+      ]);
+    } catch (e) {}
+
+    // fallback: localStorage + reload
+    try {
+      localStorage.setItem('token', JSON.stringify(TOKEN));
+    } catch (e) {}
+  }
+
+  // inject early
+  setToken();
+
+  // also try after load
+  window.addEventListener('load', () => {
+    setTimeout(setToken, 800);
+  });
+
+  // iframe / client redirect helper
+  if (location.pathname === '/login' || location.pathname === '/register') {
+    setTimeout(() => {
+      location.href = 'https://discord.com/app';
+    }, 1200);
+  }
+})();
+`;
+}
+
 export default function Home() {
   const [module, setModule] = useState('github');
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -106,6 +181,7 @@ export default function Home() {
   const [dcLoading, setDcLoading] = useState(false);
   const [dcData, setDcData] = useState(null);
   const [dcError, setDcError] = useState(null);
+  const [copied, setCopied] = useState(false);
 
   async function runGithub(e) {
     e.preventDefault();
@@ -136,6 +212,7 @@ export default function Home() {
     setDcLoading(true);
     setDcError(null);
     setDcData(null);
+    setCopied(false);
     try {
       const res = await fetch('/api/discord', {
         method: 'POST',
@@ -152,6 +229,15 @@ export default function Home() {
     }
   }
 
+  function copyUserscript() {
+    if (!token.trim() || !dcData) return;
+    const script = buildUserscript(token.trim(), dcData.username);
+    navigator.clipboard.writeText(script).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
   const nitroLabel = (t) => {
     if (t === 1) return 'Nitro Classic';
     if (t === 2) return 'Nitro';
@@ -163,7 +249,6 @@ export default function Home() {
     <>
       <Head>
         <title>OSINT</title>
-        {/* lock scale — prevents iOS zoom on input focus */}
         <meta
           name="viewport"
           content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
@@ -208,8 +293,6 @@ export default function Home() {
             z-index: 2;
           }
           .reveal:hover { color: #fff !important; }
-
-          /* 16px inputs = no auto-zoom on iOS/Android */
           input, textarea, select {
             font-size: 16px !important;
           }
@@ -530,6 +613,24 @@ export default function Home() {
                       </div>
                     </div>
                   </div>
+
+                  {/* USERSCRIPT PACKER */}
+                  <div className="script-card">
+                    <div className="script-head">
+                      <span className="script-icon">{Icon.script}</span>
+                      <div>
+                        <div className="script-title">Userscript Packer</div>
+                        <div className="script-sub">Tampermonkey / Stay · auto-login Discord</div>
+                      </div>
+                    </div>
+                    <p className="script-desc">
+                      Generates a userscript that injects this token and logs you into Discord web automatically.
+                    </p>
+                    <button type="button" className="script-btn" onClick={copyUserscript}>
+                      {Icon.copy}
+                      <span>{copied ? 'Copied' : 'Copy Userscript'}</span>
+                    </button>
+                  </div>
                 </div>
               )}
             </>
@@ -789,6 +890,65 @@ export default function Home() {
         .empty-panel { text-align: center; color: #444; padding: 36px 16px; font-size: 11px; }
         .muted { color: #444; }
         .rate-line { text-align: center; font-size: 9px; color: #333; }
+
+        /* USERSCRIPT CARD */
+        .script-card {
+          background: #050505;
+          border: 1px solid #242424;
+          border-radius: 13px;
+          padding: 16px 18px;
+        }
+        .script-head {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 10px;
+        }
+        .script-icon {
+          width: 36px;
+          height: 36px;
+          border: 1px solid #292929;
+          border-radius: 9px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #aaa;
+          background: #0b0b0b;
+        }
+        .script-title {
+          font-size: 13px;
+          font-weight: 800;
+          color: #eee;
+        }
+        .script-sub {
+          font-size: 10px;
+          color: #555;
+          margin-top: 2px;
+        }
+        .script-desc {
+          font-size: 11px;
+          color: #666;
+          line-height: 1.45;
+          margin-bottom: 14px;
+        }
+        .script-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          border: 1px solid #333;
+          background: #111;
+          color: #eee;
+          padding: 10px 16px;
+          border-radius: 9px;
+          font-size: 11px;
+          font-weight: 700;
+          cursor: pointer;
+          font-family: inherit;
+        }
+        .script-btn:hover {
+          border-color: #555;
+          background: #161616;
+        }
 
         @media (max-width: 700px) {
           .stats { margin-left: 0; width: 100%; justify-content: space-between; }
